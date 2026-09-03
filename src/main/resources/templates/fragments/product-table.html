@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <div class="products-panel">
+        <div class="products-panel-header">
+            <h2 class="products-panel-title" th:text="#{table.heading}">Products</h2>
+            <span class="products-count" th:if="${!#lists.isEmpty(products)}"
+                  th:text="#{table.count(${#lists.size(products)})}">30 items</span>
+        </div>
+
+        <div class="table-wrap" th:if="${!#lists.isEmpty(products)}">
+            <table class="products-table">
+                <thead>
+                <tr>
+                    <th class="col-id" th:text="#{table.id}">ID</th>
+                    <th class="col-title" th:text="#{table.title}">Title</th>
+                    <th class="col-vendor" th:text="#{table.vendor}">Vendor</th>
+                    <th class="col-price" th:text="#{table.price}">Price (NOK)</th>
+                    <th class="col-handle" th:text="#{table.handle}">Handle</th>
+                    <th class="col-variants" th:text="#{table.variants}">Variants</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="product : ${products}">
+                    <td class="col-id">
+                        <span class="id-badge" th:text="${product.id}">1</span>
+                    </td>
+                    <td class="col-title">
+                        <span class="product-title" th:text="${product.title}">Title</span>
+                    </td>
+                    <td class="col-vendor">
+                        <span th:if="${product.vendor}" class="vendor-badge" th:text="${product.vendor}">Vendor</span>
+                        <span th:unless="${product.vendor}" class="cell-muted" th:text="#{common.dash}">-</span>
+                    </td>
+                    <td class="col-price">
+                        <span th:if="${product.variantCount > 0 and product.price != null}" class="price-cell price-from">
+                            <span class="price-from-label" th:text="#{table.price.from}">from</span>
+                            <span class="price-value" th:text="${product.price}">0</span>
+                        </span>
+                        <span th:if="${product.variantCount == 0 and product.price != null}" class="price-cell">
+                            <span class="price-value" th:text="${product.price}">0</span>
+                        </span>
+                        <span th:if="${product.price == null}" class="cell-muted" th:text="#{common.dash}">-</span>
+                    </td>
+                    <td class="col-handle">
+                        <code class="handle-code" th:text="${product.handle}">handle</code>
+                    </td>
+                    <td class="col-variants">
+                        <button th:if="${product.variantCount > 0}"
+                                type="button"
+                                class="variant-count-btn"
+                                th:text="${product.variantCount}"
+                                th:attr="data-product-title=${product.title},
+                                         data-variants=${product.variantsJson != null ? product.variantsJson : '[]'}">0</button>
+                        <span th:if="${product.variantCount == 0}" class="variant-zero" th:text="${product.variantCount}">0</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="table-empty" th:if="${#lists.isEmpty(products)}" th:text="#{table.empty}">
+            No products found. Wait for the sync job or add one below.
+        </p>
+    </div>
+
+    <form class="add-form add-form-panel"
+          hx-post="/products"
+          hx-target="#products-container"
+          hx-swap="innerHTML">
+        <h2 class="add-form-title" th:text="#{form.add.heading}">Add product</h2>
+        <div class="form-grid">
+            <label>
+                <span th:text="#{form.title}">Title</span>
+                <input class="wa-input" name="title" required th:placeholder="#{form.title.placeholder}"/>
+            </label>
+            <label>
+                <span th:text="#{form.vendor}">Vendor</span>
+                <input class="wa-input" name="vendor" th:placeholder="#{form.vendor.placeholder}"/>
+            </label>
+            <label>
+                <span th:text="#{form.price}">Price</span>
+                <input class="wa-input"
+                       id="product-price-input"
+                       name="price"
+                       type="number"
+                       step="0.01"
+                       min="0"
+                       th:placeholder="#{form.price.placeholder}"
+                       th:data-default-placeholder="#{form.price.placeholder}"
+                       th:data-disabled-placeholder="#{form.price.disabled.placeholder}"/>
+            </label>
+            <label>
+                <span th:text="#{form.handle}">Handle</span>
+                <input class="wa-input" name="handle" required th:placeholder="#{form.handle.placeholder}"/>
+            </label>
+        </div>
+
+        <button type="button"
+                class="variant-action-btn show-variants-btn"
+                th:text="#{form.variant.add}">+ Add variant</button>
+
+        <section class="variants-section"
+                 id="variants-section"
+                 hidden
+                 th:attr="data-spec-label=#{form.variant.specification},
+                          data-price-label=#{form.variant.price},
+                          data-remove-label=#{form.variant.remove},
+                          data-spec-placeholder=#{form.variant.specification.placeholder},
+                          data-price-placeholder=#{form.variant.price.placeholder}">
+            <h3 th:text="#{form.variants.heading}">Variants</h3>
+            <p class="field-hint" th:text="#{form.variants.helper}">Add as many variants as you need.</p>
+            <div class="variant-rows" id="variant-rows"></div>
+            <button type="button" class="variant-action-btn add-variant-btn" th:text="#{form.variant.add}">+ Add variant</button>
+        </section>
+
+        <p class="form-error" th:if="${errorKey}" th:text="#{__${errorKey}__}">Validation error</p>
+
+        <wa-button type="submit" variant="success" th:text="#{button.addProduct}">Add product</wa-button>
+    </form>
+
+    <style>
+        .products-panel {
+            margin-bottom: var(--wa-space-l);
+            border: 1px solid var(--wa-color-neutral-88, #e0e0e0);
+            border-radius: var(--wa-radius-l, 12px);
+            background: var(--wa-color-neutral-100);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
+        }
+
+        .products-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--wa-space-m);
+            padding: var(--wa-space-m) var(--wa-space-l);
+            border-bottom: 1px solid var(--wa-color-neutral-90);
+            background: linear-gradient(
+                180deg,
+                var(--wa-color-neutral-98, #fafafa) 0%,
+                var(--wa-color-neutral-100) 100%
+            );
+        }
+
+        .products-panel-title {
+            margin: 0;
+            font-size: var(--wa-font-size-m);
+            font-weight: var(--wa-font-weight-semibold);
+            color: var(--wa-color-neutral-15);
+        }
+
+        .products-count {
+            font-size: var(--wa-font-size-xs);
+            font-weight: var(--wa-font-weight-medium);
+            color: var(--wa-color-neutral-45);
+            padding: var(--wa-space-2xs) var(--wa-space-s);
+            border-radius: var(--wa-radius-pill, 999px);
+            background: var(--wa-color-neutral-95);
+            border: 1px solid var(--wa-color-neutral-90);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        .products-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: var(--wa-font-size-s);
+        }
+
+        .products-table th,
+        .products-table td {
+            padding: var(--wa-space-m) var(--wa-space-l);
+            text-align: left;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--wa-color-neutral-92, #ebebeb);
+        }
+
+        .products-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--wa-color-neutral-96, #f3f3f3);
+            color: var(--wa-color-neutral-35);
+            font-size: var(--wa-font-size-xs);
+            font-weight: var(--wa-font-weight-semibold);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 2px solid var(--wa-color-neutral-88, #e0e0e0);
+        }
+
+        .products-table tbody tr {
+            transition: background-color 120ms ease;
+        }
+
+        .products-table tbody tr:nth-child(even) {
+            background: var(--wa-color-neutral-99, #fcfcfc);
+        }
+
+        .products-table tbody tr:hover {
+            background: var(--wa-color-brand-95, #eef6ff);
+        }
+
+        .products-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .col-id {
+            width: 4.5rem;
+            text-align: center;
+        }
+
+        .products-table tbody .col-id,
+        .products-table tbody .col-variants {
+            text-align: center;
+        }
+
+        .col-price {
+            width: 8.5rem;
+            text-align: right;
+        }
+
+        .products-table thead .col-price {
+            text-align: right;
+        }
+
+        .col-variants {
+            width: 6rem;
+            text-align: center;
+        }
+
+        .products-table thead .col-variants {
+            text-align: center;
+        }
+
+        .col-handle {
+            min-width: 10rem;
+        }
+
+        .id-badge {
+            display: inline-block;
+            min-width: 2rem;
+            padding: 0.15rem 0.45rem;
+            font-size: var(--wa-font-size-xs);
+            font-weight: var(--wa-font-weight-semibold);
+            font-variant-numeric: tabular-nums;
+            color: var(--wa-color-neutral-40);
+            background: var(--wa-color-neutral-95);
+            border: 1px solid var(--wa-color-neutral-88);
+            border-radius: var(--wa-radius-s, 6px);
+        }
+
+        .product-title {
+            font-weight: var(--wa-font-weight-semibold);
+            color: var(--wa-color-neutral-10);
+            line-height: 1.35;
+        }
+
+        .vendor-badge {
+            display: inline-block;
+            padding: 0.2rem 0.55rem;
+            font-size: var(--wa-font-size-xs);
+            font-weight: var(--wa-font-weight-medium);
+            color: var(--wa-color-neutral-25);
+            background: var(--wa-color-neutral-96);
+            border: 1px solid var(--wa-color-neutral-88);
+            border-radius: var(--wa-radius-pill, 999px);
+        }
+
+        .cell-muted {
+            color: var(--wa-color-neutral-55);
+        }
+
+        .price-cell {
+            display: inline-flex;
+            align-items: baseline;
+            justify-content: flex-end;
+            gap: var(--wa-space-2xs);
+            width: 100%;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .price-from {
+            flex-direction: row;
+        }
+
+        .price-from-label {
+            font-size: var(--wa-font-size-xs);
+            color: var(--wa-color-neutral-50);
+            text-transform: lowercase;
+        }
+
+        .price-value {
+            font-weight: var(--wa-font-weight-semibold);
+            color: var(--wa-color-neutral-15);
+        }
+
+        .handle-code {
+            display: inline-block;
+            max-width: 14rem;
+            padding: 0.2rem 0.5rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: var(--wa-font-size-xs);
+            color: var(--wa-color-neutral-30);
+            background: var(--wa-color-neutral-96);
+            border: 1px solid var(--wa-color-neutral-88);
+            border-radius: var(--wa-radius-s, 6px);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .variant-count-btn {
+            min-width: 2rem;
+            padding: 0.25rem 0.65rem;
+            border: 1px solid var(--wa-color-brand-70, #93c5fd);
+            border-radius: var(--wa-radius-pill, 999px);
+            background: var(--wa-color-brand-95, #eff6ff);
+            color: var(--wa-color-brand-40, #2563eb);
+            font: inherit;
+            font-size: var(--wa-font-size-xs);
+            font-weight: var(--wa-font-weight-bold);
+            font-variant-numeric: tabular-nums;
+            cursor: pointer;
+            transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+        }
+
+        .variant-count-btn:hover {
+            background: var(--wa-color-brand-90, #dbeafe);
+            border-color: var(--wa-color-brand-50, #3b82f6);
+        }
+
+        .variant-count-btn:active {
+            transform: scale(0.96);
+        }
+
+        .variant-zero {
+            display: inline-block;
+            min-width: 2rem;
+            padding: 0.25rem 0.65rem;
+            font-size: var(--wa-font-size-xs);
+            font-variant-numeric: tabular-nums;
+            color: var(--wa-color-neutral-50);
+        }
+
+        .table-empty {
+            margin: 0;
+            padding: var(--wa-space-xl) var(--wa-space-l);
+            text-align: center;
+            color: var(--wa-color-neutral-45);
+            font-size: var(--wa-font-size-s);
+            background: var(--wa-color-neutral-99);
+        }
+
+        .add-form {
+            display: grid;
+            gap: var(--wa-space-m);
+        }
+
+        .add-form-panel {
+            padding: var(--wa-space-l);
+            border: 1px solid var(--wa-color-neutral-88, #e0e0e0);
+            border-radius: var(--wa-radius-l, 12px);
+            background: var(--wa-color-neutral-100);
+            box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
+        }
+
+        .add-form-title {
+            margin: 0;
+            font-size: var(--wa-font-size-m);
+            font-weight: var(--wa-font-weight-semibold);
+            color: var(--wa-color-neutral-15);
+            padding-bottom: var(--wa-space-s);
+            border-bottom: 1px solid var(--wa-color-neutral-92);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--wa-space-m);
+        }
+
+        .form-grid label {
+            display: grid;
+            gap: var(--wa-space-2xs);
+            font-size: var(--wa-font-size-s);
+            color: var(--wa-color-neutral-30);
+        }
+
+        .field-hint {
+            color: var(--wa-color-neutral-50);
+            font-size: var(--wa-font-size-xs);
+        }
+
+        .variants-section {
+            display: grid;
+            gap: var(--wa-space-s);
+            padding: var(--wa-space-m);
+            border: 1px dashed var(--wa-color-neutral-85);
+            border-radius: var(--wa-radius-m);
+            background: var(--wa-color-neutral-99);
+        }
+
+        .variants-section[hidden] {
+            display: none;
+        }
+
+        .variants-section h3 {
+            margin: 0;
+            font-size: var(--wa-font-size-m);
+            color: var(--wa-color-neutral-20);
+        }
+
+        .variant-rows {
+            display: grid;
+            gap: var(--wa-space-s);
+        }
+
+        .variant-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: var(--wa-space-m);
+            align-items: end;
+        }
+
+        .variant-row label {
+            display: grid;
+            gap: var(--wa-space-2xs);
+            font-size: var(--wa-font-size-s);
+            color: var(--wa-color-neutral-30);
+        }
+
+        .form-error {
+            margin: 0;
+            color: var(--wa-color-danger-50);
+            font-size: var(--wa-font-size-s);
+        }
+
+        .variant-action-btn {
+            align-self: end;
+            padding: var(--wa-space-s) var(--wa-space-m);
+            border: 1px solid var(--wa-color-neutral-80);
+            border-radius: var(--wa-radius-m);
+            background: var(--wa-color-neutral-100);
+            color: var(--wa-color-neutral-20);
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .variant-action-btn:hover {
+            background: var(--wa-color-neutral-95);
+        }
+
+        .add-variant-btn {
+            justify-self: start;
+        }
+
+        .wa-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: var(--wa-space-s) var(--wa-space-m);
+            border: 1px solid var(--wa-color-neutral-80);
+            border-radius: var(--wa-radius-m);
+            background: var(--wa-color-neutral-100);
+            color: var(--wa-color-neutral-10);
+            font: inherit;
+        }
+
+        .wa-input:focus {
+            outline: 2px solid var(--wa-color-brand-60);
+            outline-offset: 1px;
+        }
+
+        .wa-input:disabled {
+            background: var(--wa-color-neutral-95);
+            color: var(--wa-color-neutral-50);
+            cursor: not-allowed;
+        }
+    </style>
+</div>
+</body>
+</html>

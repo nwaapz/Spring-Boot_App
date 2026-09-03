@@ -1,0 +1,50 @@
+{
+  "products": [
+    {
+      "title": "Warming Baggy Jeans",
+      "handle": "warming-baggy-jeans",
+      "vendor": "FAMME",
+      "variants": [
+        {"id": 1, "title": "S / 34\"", "price": "1199.00"},
+        {"id": 2, "title": "M / 34\"", "price": "1199.00"}
+      ]
+    },
+    {
+      "title": "Classic Hoodie",
+      "handle": "classic-hoodie",
+      "vendor": "FAMME",
+      "variants": [
+        {"id": 3, "title": "S", "price": "899.00"},
+        {"id": 4, "title": "M", "price": "899.00"},
+        {"id": 5, "title": "L", "price": "899.00"}
+      ]
+    },
+    {
+      "title": "Training Tights",
+      "handle": "training-tights",
+      "vendor": "FAMME",
+      "variants": [
+        {"id": 6, "title": "XS", "price": "749.00"},
+        {"id": 7, "title": "S", "price": "749.00"}
+      ]
+    },
+    {
+      "title": "Seamless Sports Bra",
+      "handle": "seamless-sports-bra",
+      "vendor": "FAMME",
+      "variants": [
+        {"id": 8, "title": "S", "price": "499.00"},
+        {"id": 9, "title": "M", "price": "499.00"}
+      ]
+    },
+    {
+      "title": "Oversized Zip Jacket",
+      "handle": "oversized-zip-jacket",
+      "vendor": "FAMME",
+      "variants": [
+        {"id": 10, "title": "S", "price": "1099.00"},
+        {"id": 11, "title": "M", "price": "1099.00"}
+      ]
+    }
+  ]
+}

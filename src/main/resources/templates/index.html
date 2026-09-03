@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="#{page.title}">Products</title>
+
+    <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.12.0/styles/themes/default.css"/>
+    <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.12.0/styles/utilities.css"/>
+    <script type="module" src="https://ka-f.webawesome.com/webawesome@3.12.0/webawesome.loader.js"></script>
+    <script src="https://unpkg.com/htmx.org@4.0.0/dist/htmx.min.js"></script>
+
+    <style>
+        :root {
+            font-family: var(--wa-font-family-sans, system-ui, sans-serif);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--wa-color-neutral-95);
+            color: var(--wa-color-neutral-10);
+            padding: var(--wa-space-xl);
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--wa-space-l);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--wa-space-m);
+            padding: var(--wa-space-l);
+            background: var(--wa-color-neutral-100);
+            border: 1px solid var(--wa-color-neutral-90);
+            border-radius: var(--wa-radius-l);
+            box-shadow: var(--wa-shadow-s);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: var(--wa-font-size-2xl);
+            font-weight: var(--wa-font-weight-bold);
+        }
+
+        .header p {
+            margin: var(--wa-space-2xs) 0 0;
+            color: var(--wa-color-neutral-40);
+            font-size: var(--wa-font-size-s);
+        }
+
+        .panel {
+            padding: var(--wa-space-l);
+            background: var(--wa-color-neutral-100);
+            border: 1px solid var(--wa-color-neutral-90);
+            border-radius: var(--wa-radius-l);
+            box-shadow: var(--wa-shadow-s);
+        }
+
+        .actions {
+            display: flex;
+            gap: var(--wa-space-s);
+            align-items: center;
+        }
+
+        #products-container {
+            min-height: 120px;
+        }
+
+        .empty-state {
+            color: var(--wa-color-neutral-40);
+            text-align: center;
+            padding: var(--wa-space-xl);
+        }
+
+        .variants-modal[hidden] {
+            display: none;
+        }
+
+        .variants-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: grid;
+            place-items: center;
+            padding: var(--wa-space-l);
+        }
+
+        .variants-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgb(0 0 0 / 40%);
+        }
+
+        .variants-modal-dialog {
+            position: relative;
+            z-index: 1;
+            width: min(100%, 520px);
+            max-height: min(80vh, 640px);
+            display: grid;
+            grid-template-rows: auto 1fr;
+            background-color: #ffffff;
+            border: 1px solid var(--wa-color-neutral-90, #d4d4d4);
+            border-radius: var(--wa-radius-l, 12px);
+            box-shadow: 0 20px 40px rgb(0 0 0 / 20%);
+            overflow: hidden;
+        }
+
+        .variants-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--wa-space-m);
+            padding: var(--wa-space-m) var(--wa-space-l);
+            border-bottom: 1px solid var(--wa-color-neutral-90, #d4d4d4);
+            background-color: #ffffff;
+        }
+
+        .variants-modal-header h2 {
+            margin: 0;
+            font-size: var(--wa-font-size-l);
+        }
+
+        .variants-modal-close {
+            border: none;
+            background: none;
+            color: var(--wa-color-neutral-40);
+            font-size: var(--wa-font-size-xl);
+            line-height: 1;
+            cursor: pointer;
+            padding: var(--wa-space-2xs);
+        }
+
+        .variants-modal-close:hover {
+            color: var(--wa-color-neutral-20);
+        }
+
+        .variants-modal-body {
+            overflow: auto;
+            padding: var(--wa-space-l);
+            background-color: #ffffff;
+        }
+
+        .variants-modal-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: var(--wa-font-size-s);
+            background-color: #ffffff;
+            border: 1px solid var(--wa-color-neutral-90, #d4d4d4);
+            border-radius: var(--wa-radius-m, 8px);
+            overflow: hidden;
+        }
+
+        .variants-modal-table th,
+        .variants-modal-table td {
+            padding: var(--wa-space-s) var(--wa-space-m);
+            text-align: left;
+            border-bottom: 1px solid var(--wa-color-neutral-92, #ebebeb);
+            background-color: #ffffff;
+        }
+
+        .variants-modal-table thead th {
+            background: var(--wa-color-neutral-96, #f3f3f3);
+            color: var(--wa-color-neutral-35);
+            font-size: var(--wa-font-size-xs);
+            font-weight: var(--wa-font-weight-semibold);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .variants-modal-table tbody tr:nth-child(even) td {
+            background: var(--wa-color-neutral-99, #fcfcfc);
+        }
+
+        .variants-modal-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .variants-modal-table td:last-child {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            font-weight: var(--wa-font-weight-semibold);
+        }
+
+        .variants-modal-empty {
+            margin: 0;
+            color: var(--wa-color-neutral-40);
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header class="header">
+        <div>
+            <h1 th:text="#{page.heading}">Product Catalog</h1>
+        </div>
+        <div class="actions">
+            <wa-button variant="brand"
+                       hx-get="/products/table"
+                       hx-target="#products-container"
+                       hx-swap="innerHTML"
+                       th:text="#{button.loadProducts}">
+                Load products
+            </wa-button>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div id="products-container">
+            <p class="empty-state">
+                <span th:text="#{page.empty.before}">Click</span>
+                <strong th:text="#{button.loadProducts}">Load products</strong>
+                <span th:text="#{page.empty.after}">to fetch items from the database.</span>
+            </p>
+        </div>
+    </section>
+</div>
+
+<div id="variants-modal"
+     class="variants-modal"
+     hidden
+     th:attr="data-title-prefix=#{modal.variants.title},
+              data-spec-label=#{form.variant.specification},
+              data-price-label=#{table.price},
+              data-empty-message=#{modal.variants.empty},
+              data-close-label=#{modal.close}">
+    <div class="variants-modal-backdrop" data-close-modal></div>
+    <div class="variants-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="variants-modal-title">
+        <div class="variants-modal-header">
+            <h2 id="variants-modal-title"></h2>
+            <button type="button" class="variants-modal-close" data-close-modal th:attr="aria-label=#{modal.close}">&times;</button>
+        </div>
+        <div class="variants-modal-body" id="variants-modal-body"></div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const productsContainer = document.getElementById('products-container');
+        const variantsModal = document.getElementById('variants-modal');
+        const variantsModalTitle = document.getElementById('variants-modal-title');
+        const variantsModalBody = document.getElementById('variants-modal-body');
+
+        function openVariantsModal(button) {
+            if (!variantsModal || !variantsModalTitle || !variantsModalBody) {
+                return;
+            }
+
+            const productTitle = button.dataset.productTitle || '';
+            const titlePrefix = variantsModal.dataset.titlePrefix || 'Variants';
+            variantsModalTitle.textContent = productTitle ? `${titlePrefix} — ${productTitle}` : titlePrefix;
+
+            let variants = [];
+            try {
+                variants = JSON.parse(button.dataset.variants || '[]');
+            } catch (error) {
+                variants = [];
+            }
+
+            if (!Array.isArray(variants) || variants.length === 0) {
+                variantsModalBody.innerHTML = `<p class="variants-modal-empty">${variantsModal.dataset.emptyMessage || 'No variants available.'}</p>`;
+            } else {
+                const specLabel = variantsModal.dataset.specLabel || 'Specification';
+                const priceLabel = variantsModal.dataset.priceLabel || 'Price';
+                const rows = variants.map((variant) => {
+                    const title = variant.title || '—';
+                    const price = variant.price || '—';
+                    return `<tr><td>${escapeHtml(title)}</td><td>${escapeHtml(price)}</td></tr>`;
+                }).join('');
+
+                variantsModalBody.innerHTML = `
+                    <table class="variants-modal-table">
+                        <thead>
+                            <tr>
+                                <th>${escapeHtml(specLabel)}</th>
+                                <th>${escapeHtml(priceLabel)}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+            }
+
+            variantsModal.hidden = false;
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeVariantsModal() {
+            if (!variantsModal) {
+                return;
+            }
+
+            variantsModal.hidden = true;
+            document.body.style.overflow = '';
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function getVariantsSection(root) {
+            return root.querySelector('#variants-section');
+        }
+
+        function getPriceInput(form) {
+            return form?.querySelector('#product-price-input');
+        }
+
+        function enablePriceInput(form) {
+            const input = getPriceInput(form);
+            if (!input) {
+                return;
+            }
+
+            input.disabled = false;
+            input.value = '';
+            input.placeholder = input.dataset.defaultPlaceholder || '';
+        }
+
+        function disablePriceInput(form) {
+            const input = getPriceInput(form);
+            if (!input) {
+                return;
+            }
+
+            input.value = '';
+            input.disabled = true;
+            input.placeholder = input.dataset.disabledPlaceholder || '';
+        }
+
+        function createVariantRow(section) {
+            const row = document.createElement('div');
+            row.className = 'variant-row';
+            row.innerHTML = `
+                <label>
+                    <span>${section.dataset.specLabel}</span>
+                    <input class="wa-input" name="variantTitles" placeholder="${section.dataset.specPlaceholder}"/>
+                </label>
+                <label>
+                    <span>${section.dataset.priceLabel}</span>
+                    <input class="wa-input" name="variantPrices" type="number" step="0.01" min="0" placeholder="${section.dataset.pricePlaceholder}"/>
+                </label>
+                <button type="button" class="variant-action-btn remove-variant-btn">${section.dataset.removeLabel}</button>
+            `;
+            return row;
+        }
+
+        function showVariantsSection(section) {
+            const form = section.closest('.add-form');
+            const showBtn = form?.querySelector('.show-variants-btn');
+            const rowsContainer = section.querySelector('#variant-rows');
+
+            section.hidden = false;
+            if (showBtn) {
+                showBtn.hidden = true;
+            }
+
+            if (rowsContainer && rowsContainer.children.length === 0) {
+                rowsContainer.appendChild(createVariantRow(section));
+            }
+
+            disablePriceInput(form);
+        }
+
+        function hideVariantsSection(section) {
+            const form = section.closest('.add-form');
+            const showBtn = form?.querySelector('.show-variants-btn');
+            const rowsContainer = section.querySelector('#variant-rows');
+
+            if (rowsContainer) {
+                rowsContainer.innerHTML = '';
+            }
+
+            section.hidden = true;
+            if (showBtn) {
+                showBtn.hidden = false;
+            }
+
+            enablePriceInput(form);
+        }
+
+        function initVariantForm(root) {
+            const form = root.querySelector('.add-form');
+            const section = getVariantsSection(root);
+            if (!form || !section) {
+                return;
+            }
+
+            if (section.hidden) {
+                enablePriceInput(form);
+                const showBtn = form.querySelector('.show-variants-btn');
+                if (showBtn) {
+                    showBtn.hidden = false;
+                }
+            } else {
+                disablePriceInput(form);
+                const showBtn = form.querySelector('.show-variants-btn');
+                if (showBtn) {
+                    showBtn.hidden = true;
+                }
+            }
+        }
+
+        productsContainer.addEventListener('click', function (event) {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const variantCountBtn = target.closest('.variant-count-btn');
+            if (variantCountBtn) {
+                event.preventDefault();
+                openVariantsModal(variantCountBtn);
+                return;
+            }
+
+            const form = target.closest('.add-form');
+            if (!form) {
+                return;
+            }
+
+            const showBtn = target.closest('.show-variants-btn');
+            if (showBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const section = getVariantsSection(productsContainer);
+                if (section) {
+                    showVariantsSection(section);
+                }
+                return;
+            }
+
+            const section = target.closest('#variants-section');
+            if (!section) {
+                return;
+            }
+
+            const addBtn = target.closest('.add-variant-btn');
+            if (addBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const rowsContainer = section.querySelector('#variant-rows');
+                if (!rowsContainer) {
+                    return;
+                }
+
+                rowsContainer.appendChild(createVariantRow(section));
+                return;
+            }
+
+            const removeBtn = target.closest('.remove-variant-btn');
+            if (!removeBtn) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const rowsContainer = section.querySelector('#variant-rows');
+            const row = removeBtn.closest('.variant-row');
+            if (!rowsContainer || !row) {
+                return;
+            }
+
+            row.remove();
+            if (rowsContainer.querySelectorAll('.variant-row').length === 0) {
+                hideVariantsSection(section);
+            }
+        });
+
+        variantsModal?.addEventListener('click', function (event) {
+            const target = event.target;
+            if (target instanceof Element && target.closest('[data-close-modal]')) {
+                closeVariantsModal();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && variantsModal && !variantsModal.hidden) {
+                closeVariantsModal();
+            }
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function (event) {
+            if (event.target === productsContainer) {
+                initVariantForm(productsContainer);
+            }
+        });
+    })();
+</script>
+</body>
+</html>
