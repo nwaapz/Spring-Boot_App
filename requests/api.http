@@ -1,0 +1,6 @@
+
+GET http://localhost:8080/
+GET http://localhost:8080/products/table
+POST http://localhost:8080/products
+Content-Type: application/x-www-form-urlencoded
+title=Test+Product&vendor=Demo&price=199.00&handle=test-product-demo
