@@ -13,12 +13,40 @@ class ProductController(
     private val productRepository: ProductRepository,
     private val jsonMapper: JsonMapper,
 ) {
+
+    private fun addProductsToModel(model: Model){
+        model.addAttribute("products", productRepository.findAll())
+    }
+
     @GetMapping("/")
     fun index() = "index"
 
+    @GetMapping("/search")
+    fun search() = "search"
+
+    @GetMapping("/products/search")
+    fun searchProducts(
+        @RequestParam(required = false) q: String?,
+        model: Model,
+    ): String {
+        val query = q?.trim().orEmpty()
+        val products =
+            if (query.isEmpty()) {
+                productRepository.findAll()
+            } else {
+                productRepository.findByTitleContaining(query)
+            }
+        model.addAttribute("products", products)
+        model.addAttribute(
+            "emptyMessageKey",
+            if (query.isEmpty()) "table.empty" else "search.empty",
+        )
+        return "fragments/product-table :: table"
+    }
+
     @GetMapping("/products/table")
     fun productTable(model: Model): String {
-        model.addAttribute("products", productRepository.findAll())
+        addProductsToModel(model)
         return "fragments/product-table :: content"
     }
 
@@ -36,7 +64,7 @@ class ProductController(
 
         if (hasVariantMissingPrice(variants)) {
             model.addAttribute("errorKey", "form.variant.error.missingPrice")
-            model.addAttribute("products", productRepository.findAll())
+            addProductsToModel(model)
             return "fragments/product-table :: content"
         }
 
@@ -56,7 +84,7 @@ class ProductController(
             handle = handle.trim(),
             variantsJson = variantsJson,
         )
-        model.addAttribute("products", productRepository.findAll())
+        addProductsToModel(model)
         return "fragments/product-table :: content"
     }
 }

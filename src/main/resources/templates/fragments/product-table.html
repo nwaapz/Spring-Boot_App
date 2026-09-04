@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <body>
-<div th:fragment="content">
+<div th:fragment="table">
     <div class="products-panel">
         <div class="products-panel-header">
             <h2 class="products-panel-title" th:text="#{table.heading}">Products</h2>
@@ -60,11 +60,15 @@
             </table>
         </div>
 
-        <p class="table-empty" th:if="${#lists.isEmpty(products)}" th:text="#{table.empty}">
-            No products found. Wait for the sync job or add one below.
+        <p class="table-empty"
+           th:if="${#lists.isEmpty(products)}"
+           th:text="#{__${emptyMessageKey != null ? emptyMessageKey : 'table.empty'}__}">
+            No products found.
         </p>
     </div>
+</div>
 
+<div th:fragment="add-form">
     <form class="add-form add-form-panel"
           hx-post="/products"
           hx-target="#products-container"
@@ -119,7 +123,9 @@
 
         <wa-button type="submit" variant="success" th:text="#{button.addProduct}">Add product</wa-button>
     </form>
+</div>
 
+<div th:fragment="table-styles">
     <style>
         .products-panel {
             margin-bottom: var(--wa-space-l);
@@ -355,7 +361,11 @@
             font-size: var(--wa-font-size-s);
             background: var(--wa-color-neutral-99);
         }
+    </style>
+</div>
 
+<div th:fragment="form-styles">
+    <style>
         .add-form {
             display: grid;
             gap: var(--wa-space-m);
@@ -481,6 +491,13 @@
             cursor: not-allowed;
         }
     </style>
+</div>
+
+<div th:fragment="content">
+    <div th:replace="~{fragments/product-table :: table-styles}"></div>
+    <div th:replace="~{fragments/product-table :: table}"></div>
+    <div th:replace="~{fragments/product-table :: form-styles}"></div>
+    <div th:replace="~{fragments/product-table :: add-form}"></div>
 </div>
 </body>
 </html>

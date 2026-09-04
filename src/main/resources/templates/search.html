@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title th:text="#{page.title}">Products</title>
+    <title th:text="#{search.title}">Search products</title>
 
     <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.12.0/styles/themes/default.css"/>
     <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.12.0/styles/utilities.css"/>
@@ -48,20 +48,6 @@
             font-weight: var(--wa-font-weight-bold);
         }
 
-        .header p {
-            margin: var(--wa-space-2xs) 0 0;
-            color: var(--wa-color-neutral-40);
-            font-size: var(--wa-font-size-s);
-        }
-
-        .panel {
-            padding: var(--wa-space-l);
-            background: var(--wa-color-neutral-100);
-            border: 1px solid var(--wa-color-neutral-90);
-            border-radius: var(--wa-radius-l);
-            box-shadow: var(--wa-shadow-s);
-        }
-
         .actions {
             display: flex;
             gap: var(--wa-space-s);
@@ -85,14 +71,59 @@
             border-color: var(--wa-color-brand-60, #60a5fa);
         }
 
-        #products-container {
+        .panel {
+            padding: var(--wa-space-l);
+            background: var(--wa-color-neutral-100);
+            border: 1px solid var(--wa-color-neutral-90);
+            border-radius: var(--wa-radius-l);
+            box-shadow: var(--wa-shadow-s);
+            display: grid;
+            gap: var(--wa-space-l);
+        }
+
+        .search-field {
+            display: grid;
+            gap: var(--wa-space-2xs);
+        }
+
+        .search-field label {
+            font-size: var(--wa-font-size-s);
+            font-weight: var(--wa-font-weight-medium);
+            color: var(--wa-color-neutral-30);
+        }
+
+        .search-field .field-hint {
+            margin: 0;
+            color: var(--wa-color-neutral-45);
+            font-size: var(--wa-font-size-xs);
+        }
+
+        .search-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: var(--wa-space-m) var(--wa-space-l);
+            border: 1px solid var(--wa-color-neutral-80);
+            border-radius: var(--wa-radius-m);
+            background: var(--wa-color-neutral-100);
+            color: var(--wa-color-neutral-10);
+            font: inherit;
+            font-size: var(--wa-font-size-m);
+        }
+
+        .search-input:focus {
+            outline: 2px solid var(--wa-color-brand-60);
+            outline-offset: 1px;
+        }
+
+        #search-results {
             min-height: 120px;
         }
 
-        .empty-state {
+        .search-empty-state {
             color: var(--wa-color-neutral-40);
             text-align: center;
             padding: var(--wa-space-xl);
+            margin: 0;
         }
 
         .variants-modal[hidden] {
@@ -215,27 +246,34 @@
 <div class="page">
     <header class="header">
         <div>
-            <h1 th:text="#{page.heading}">Product Catalog</h1>
+            <h1 th:text="#{search.heading}">Search products</h1>
         </div>
         <div class="actions">
-            <a class="nav-link" href="/search" th:text="#{nav.search}">Search</a>
-            <wa-button variant="brand"
-                       hx-get="/products/table"
-                       hx-target="#products-container"
-                       hx-swap="innerHTML"
-                       th:text="#{button.loadProducts}">
-                Load products
-            </wa-button>
+            <a class="nav-link" href="/" th:text="#{nav.home}">Home</a>
         </div>
     </header>
 
     <section class="panel">
-        <div id="products-container">
-            <p class="empty-state">
-                <span th:text="#{page.empty.before}">Click</span>
-                <strong th:text="#{button.loadProducts}">Load products</strong>
-                <span th:text="#{page.empty.after}">to fetch items from the database.</span>
-            </p>
+        <div class="search-field">
+            <label for="search-input" th:text="#{table.title}">Title</label>
+            <input id="search-input"
+                   class="search-input"
+                   type="search"
+                   name="q"
+                   autocomplete="off"
+                   autofocus
+                   th:placeholder="#{search.placeholder}"
+                   hx-get="/products/search"
+                   hx-trigger="keyup changed delay:300ms, search"
+                   hx-target="#search-results"
+                   hx-swap="innerHTML"/>
+            <p class="field-hint" th:text="#{search.hint}">Results update as you type.</p>
+        </div>
+
+        <div th:replace="~{fragments/product-table :: table-styles}"></div>
+
+        <div id="search-results">
+            <p class="search-empty-state" th:text="#{search.placeholder}">Type to filter by title…</p>
         </div>
     </section>
 </div>
@@ -260,7 +298,7 @@
 
 <script>
     (function () {
-        const productsContainer = document.getElementById('products-container');
+        const searchResults = document.getElementById('search-results');
         const variantsModal = document.getElementById('variants-modal');
         const variantsModalTitle = document.getElementById('variants-modal-title');
         const variantsModalBody = document.getElementById('variants-modal-body');
@@ -327,110 +365,7 @@
                 .replaceAll("'", '&#39;');
         }
 
-        function getVariantsSection(root) {
-            return root.querySelector('#variants-section');
-        }
-
-        function getPriceInput(form) {
-            return form?.querySelector('#product-price-input');
-        }
-
-        function enablePriceInput(form) {
-            const input = getPriceInput(form);
-            if (!input) {
-                return;
-            }
-
-            input.disabled = false;
-            input.value = '';
-            input.placeholder = input.dataset.defaultPlaceholder || '';
-        }
-
-        function disablePriceInput(form) {
-            const input = getPriceInput(form);
-            if (!input) {
-                return;
-            }
-
-            input.value = '';
-            input.disabled = true;
-            input.placeholder = input.dataset.disabledPlaceholder || '';
-        }
-
-        function createVariantRow(section) {
-            const row = document.createElement('div');
-            row.className = 'variant-row';
-            row.innerHTML = `
-                <label>
-                    <span>${section.dataset.specLabel}</span>
-                    <input class="wa-input" name="variantTitles" placeholder="${section.dataset.specPlaceholder}"/>
-                </label>
-                <label>
-                    <span>${section.dataset.priceLabel}</span>
-                    <input class="wa-input" name="variantPrices" type="number" step="0.01" min="0" placeholder="${section.dataset.pricePlaceholder}"/>
-                </label>
-                <button type="button" class="variant-action-btn remove-variant-btn">${section.dataset.removeLabel}</button>
-            `;
-            return row;
-        }
-
-        function showVariantsSection(section) {
-            const form = section.closest('.add-form');
-            const showBtn = form?.querySelector('.show-variants-btn');
-            const rowsContainer = section.querySelector('#variant-rows');
-
-            section.hidden = false;
-            if (showBtn) {
-                showBtn.hidden = true;
-            }
-
-            if (rowsContainer && rowsContainer.children.length === 0) {
-                rowsContainer.appendChild(createVariantRow(section));
-            }
-
-            disablePriceInput(form);
-        }
-
-        function hideVariantsSection(section) {
-            const form = section.closest('.add-form');
-            const showBtn = form?.querySelector('.show-variants-btn');
-            const rowsContainer = section.querySelector('#variant-rows');
-
-            if (rowsContainer) {
-                rowsContainer.innerHTML = '';
-            }
-
-            section.hidden = true;
-            if (showBtn) {
-                showBtn.hidden = false;
-            }
-
-            enablePriceInput(form);
-        }
-
-        function initVariantForm(root) {
-            const form = root.querySelector('.add-form');
-            const section = getVariantsSection(root);
-            if (!form || !section) {
-                return;
-            }
-
-            if (section.hidden) {
-                enablePriceInput(form);
-                const showBtn = form.querySelector('.show-variants-btn');
-                if (showBtn) {
-                    showBtn.hidden = false;
-                }
-            } else {
-                disablePriceInput(form);
-                const showBtn = form.querySelector('.show-variants-btn');
-                if (showBtn) {
-                    showBtn.hidden = true;
-                }
-            }
-        }
-
-        productsContainer.addEventListener('click', function (event) {
+        searchResults.addEventListener('click', function (event) {
             const target = event.target;
             if (!(target instanceof Element)) {
                 return;
@@ -440,62 +375,6 @@
             if (variantCountBtn) {
                 event.preventDefault();
                 openVariantsModal(variantCountBtn);
-                return;
-            }
-
-            const form = target.closest('.add-form');
-            if (!form) {
-                return;
-            }
-
-            const showBtn = target.closest('.show-variants-btn');
-            if (showBtn) {
-                event.preventDefault();
-                event.stopPropagation();
-
-                const section = getVariantsSection(productsContainer);
-                if (section) {
-                    showVariantsSection(section);
-                }
-                return;
-            }
-
-            const section = target.closest('#variants-section');
-            if (!section) {
-                return;
-            }
-
-            const addBtn = target.closest('.add-variant-btn');
-            if (addBtn) {
-                event.preventDefault();
-                event.stopPropagation();
-
-                const rowsContainer = section.querySelector('#variant-rows');
-                if (!rowsContainer) {
-                    return;
-                }
-
-                rowsContainer.appendChild(createVariantRow(section));
-                return;
-            }
-
-            const removeBtn = target.closest('.remove-variant-btn');
-            if (!removeBtn) {
-                return;
-            }
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            const rowsContainer = section.querySelector('#variant-rows');
-            const row = removeBtn.closest('.variant-row');
-            if (!rowsContainer || !row) {
-                return;
-            }
-
-            row.remove();
-            if (rowsContainer.querySelectorAll('.variant-row').length === 0) {
-                hideVariantsSection(section);
             }
         });
 
@@ -509,12 +388,6 @@
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape' && variantsModal && !variantsModal.hidden) {
                 closeVariantsModal();
-            }
-        });
-
-        document.body.addEventListener('htmx:afterSwap', function (event) {
-            if (event.target === productsContainer) {
-                initVariantForm(productsContainer);
             }
         });
     })();

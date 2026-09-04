@@ -29,6 +29,29 @@ class ProductRepository(
                 )
             }.list()
 
+    fun findByTitleContaining(query: String): List<Product> =
+        jdbcClient
+            .sql(
+                """
+                SELECT id, title, vendor, price, handle, variants::text AS variants_json,
+                       COALESCE(jsonb_array_length(variants), 0) AS variant_count
+                FROM product
+                WHERE title ILIKE :pattern
+                ORDER BY id
+                """.trimIndent(),
+            ).param("pattern", "%$query%")
+            .query { rs, _ ->
+                Product(
+                    id = rs.getLong("id"),
+                    title = rs.getString("title"),
+                    vendor = rs.getString("vendor"),
+                    price = rs.getBigDecimal("price"),
+                    handle = rs.getString("handle"),
+                    variantsJson = rs.getString("variants_json"),
+                    variantCount = rs.getInt("variant_count"),
+                )
+            }.list()
+
     fun insert(
         title: String,
         vendor: String?,
