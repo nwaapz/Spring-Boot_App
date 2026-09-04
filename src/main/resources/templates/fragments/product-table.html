@@ -19,6 +19,7 @@
                     <th class="col-price" th:text="#{table.price}">Price (NOK)</th>
                     <th class="col-handle" th:text="#{table.handle}">Handle</th>
                     <th class="col-variants" th:text="#{table.variants}">Variants</th>
+                    <th class="col-actions" th:text="#{table.actions}">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -54,6 +55,11 @@
                                 th:attr="data-product-title=${product.title},
                                          data-variants=${product.variantsJson != null ? product.variantsJson : '[]'}">0</button>
                         <span th:if="${product.variantCount == 0}" class="variant-zero" th:text="${product.variantCount}">0</span>
+                    </td>
+                    <td class="col-actions">
+                        <a class="edit-link"
+                           th:href="@{/products/{id}/edit(id=${product.id})}"
+                           th:text="#{table.edit}">Edit</a>
                     </td>
                 </tr>
                 </tbody>
@@ -237,6 +243,36 @@
         .col-variants {
             width: 6rem;
             text-align: center;
+        }
+
+        .col-actions {
+            width: 5rem;
+            text-align: center;
+        }
+
+        .products-table thead .col-actions {
+            text-align: center;
+        }
+
+        .products-table tbody .col-actions {
+            text-align: center;
+        }
+
+        .edit-link {
+            font-size: var(--wa-font-size-xs);
+            font-weight: var(--wa-font-weight-medium);
+            color: var(--wa-color-brand-40, #2563eb);
+            text-decoration: none;
+            padding: 0.2rem 0.55rem;
+            border: 1px solid var(--wa-color-brand-80, #bfdbfe);
+            border-radius: var(--wa-radius-pill, 999px);
+            background: var(--wa-color-brand-95, #eff6ff);
+            transition: background-color 120ms ease, border-color 120ms ease;
+        }
+
+        .edit-link:hover {
+            background: var(--wa-color-brand-90, #dbeafe);
+            border-color: var(--wa-color-brand-60, #60a5fa);
         }
 
         .products-table thead .col-variants {

@@ -89,6 +89,19 @@
             min-height: 120px;
         }
 
+        .success-banner {
+            display: flex;
+            align-items: center;
+            gap: var(--wa-space-s);
+            padding: var(--wa-space-m) var(--wa-space-l);
+            background: var(--wa-color-success-95, #ecfdf5);
+            border: 1px solid var(--wa-color-success-70, #6ee7b7);
+            border-radius: var(--wa-radius-m);
+            color: var(--wa-color-success-30, #047857);
+            font-size: var(--wa-font-size-s);
+            font-weight: var(--wa-font-weight-medium);
+        }
+
         .empty-state {
             color: var(--wa-color-neutral-40);
             text-align: center;
@@ -228,6 +241,10 @@
             </wa-button>
         </div>
     </header>
+
+    <div class="success-banner" th:if="${successKey}" th:text="#{__${successKey}__}">
+        Product updated successfully.
+    </div>
 
     <section class="panel">
         <div id="products-container">

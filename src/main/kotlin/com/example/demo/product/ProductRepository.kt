@@ -29,6 +29,29 @@ class ProductRepository(
                 )
             }.list()
 
+    fun findById(id: Long): Product? =
+        jdbcClient
+            .sql(
+                """
+                SELECT id, title, vendor, price, handle, variants::text AS variants_json,
+                       COALESCE(jsonb_array_length(variants), 0) AS variant_count
+                FROM product
+                WHERE id = :id
+                """.trimIndent(),
+            ).param("id", id)
+            .query { rs, _ ->
+                Product(
+                    id = rs.getLong("id"),
+                    title = rs.getString("title"),
+                    vendor = rs.getString("vendor"),
+                    price = rs.getBigDecimal("price"),
+                    handle = rs.getString("handle"),
+                    variantsJson = rs.getString("variants_json"),
+                    variantCount = rs.getInt("variant_count"),
+                )
+            }.optional()
+            .orElse(null)
+
     fun findByTitleContaining(query: String): List<Product> =
         jdbcClient
             .sql(
@@ -73,6 +96,33 @@ class ProductRepository(
             .param("variantsJson", variantsJson ?: "[]")
             .query(Long::class.java)
             .single()
+
+    fun update(
+        id: Long,
+        title: String,
+        vendor: String?,
+        price: BigDecimal?,
+        handle: String,
+        variantsJson: String?,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                UPDATE product
+                SET title = :title,
+                    vendor = :vendor,
+                    price = :price,
+                    handle = :handle,
+                    variants = CAST(:variantsJson AS jsonb)
+                WHERE id = :id
+                """.trimIndent(),
+            ).param("id", id)
+            .param("title", title)
+            .param("vendor", vendor)
+            .param("price", price)
+            .param("handle", handle)
+            .param("variantsJson", variantsJson ?: "[]")
+            .update() > 0
 
     fun upsert(
         title: String,

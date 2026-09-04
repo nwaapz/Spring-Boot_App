@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="#{form.edit.heading}">Edit product</title>
+
+    <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.12.0/styles/themes/default.css"/>
+    <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.12.0/styles/utilities.css"/>
+    <script type="module" src="https://ka-f.webawesome.com/webawesome@3.12.0/webawesome.loader.js"></script>
+
+    <style>
+        :root {
+            font-family: var(--wa-font-family-sans, system-ui, sans-serif);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--wa-color-neutral-95);
+            color: var(--wa-color-neutral-10);
+            padding: var(--wa-space-xl);
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--wa-space-l);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--wa-space-m);
+            padding: var(--wa-space-l);
+            background: var(--wa-color-neutral-100);
+            border: 1px solid var(--wa-color-neutral-90);
+            border-radius: var(--wa-radius-l);
+            box-shadow: var(--wa-shadow-s);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: var(--wa-font-size-2xl);
+            font-weight: var(--wa-font-weight-bold);
+        }
+
+        .nav-link {
+            padding: var(--wa-space-s) var(--wa-space-m);
+            border-radius: var(--wa-radius-m);
+            color: var(--wa-color-brand-40, #2563eb);
+            font-size: var(--wa-font-size-s);
+            font-weight: var(--wa-font-weight-medium);
+            text-decoration: none;
+            border: 1px solid var(--wa-color-brand-80, #bfdbfe);
+            background: var(--wa-color-brand-95, #eff6ff);
+            transition: background-color 120ms ease, border-color 120ms ease;
+        }
+
+        .nav-link:hover {
+            background: var(--wa-color-brand-90, #dbeafe);
+            border-color: var(--wa-color-brand-60, #60a5fa);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: var(--wa-space-s);
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/product-table :: form-styles}"></div>
+<div class="page">
+    <header class="header">
+        <div>
+            <h1 th:text="#{form.edit.heading}">Edit product</h1>
+        </div>
+        <div class="actions">
+            <a class="nav-link" href="/" th:text="#{nav.home}">Home</a>
+        </div>
+    </header>
+
+    <form class="add-form add-form-panel"
+          th:action="@{/products/{id}(id=${product.id})}"
+          method="post"
+          id="edit-form"
+          th:attr="data-variants=${product.variantsJson != null ? product.variantsJson : '[]'}">
+        <h2 class="add-form-title" th:text="#{form.edit.heading}">Edit product</h2>
+        <div class="form-grid">
+            <label>
+                <span th:text="#{form.title}">Title</span>
+                <input class="wa-input" name="title" required th:placeholder="#{form.title.placeholder}" th:value="${product.title}"/>
+            </label>
+            <label>
+                <span th:text="#{form.vendor}">Vendor</span>
+                <input class="wa-input" name="vendor" th:placeholder="#{form.vendor.placeholder}" th:value="${product.vendor}"/>
+            </label>
+            <label>
+                <span th:text="#{form.price}">Price</span>
+                <input class="wa-input"
+                       id="product-price-input"
+                       name="price"
+                       type="number"
+                       step="0.01"
+                       min="0"
+                       th:placeholder="#{form.price.placeholder}"
+                       th:data-default-placeholder="#{form.price.placeholder}"
+                       th:data-disabled-placeholder="#{form.price.disabled.placeholder}"
+                       th:value="${product.variantCount == 0 ? product.price : null}"/>
+            </label>
+            <label>
+                <span th:text="#{form.handle}">Handle</span>
+                <input class="wa-input" name="handle" required th:placeholder="#{form.handle.placeholder}" th:value="${product.handle}"/>
+            </label>
+        </div>
+
+        <button type="button"
+                class="variant-action-btn show-variants-btn"
+                th:hidden="${product.variantCount > 0}"
+                th:text="#{form.variant.add}">+ Add variant</button>
+
+        <section class="variants-section"
+                 id="variants-section"
+                 th:hidden="${product.variantCount == 0}"
+                 th:attr="data-spec-label=#{form.variant.specification},
+                          data-price-label=#{form.variant.price},
+                          data-remove-label=#{form.variant.remove},
+                          data-spec-placeholder=#{form.variant.specification.placeholder},
+                          data-price-placeholder=#{form.variant.price.placeholder}">
+            <h3 th:text="#{form.variants.heading}">Variants</h3>
+            <p class="field-hint" th:text="#{form.variants.helper}">Add as many variants as you need.</p>
+            <div class="variant-rows" id="variant-rows"></div>
+            <button type="button" class="variant-action-btn add-variant-btn" th:text="#{form.variant.add}">+ Add variant</button>
+        </section>
+
+        <p class="form-error" th:if="${errorKey}" th:text="#{__${errorKey}__}">Validation error</p>
+
+        <div class="form-actions">
+            <wa-button type="submit" variant="success" th:text="#{button.save}">Save changes</wa-button>
+            <a class="nav-link" href="/" th:text="#{button.cancel}">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script th:inline="javascript">
+    (function () {
+        const form = document.getElementById('edit-form');
+        const section = document.getElementById('variants-section');
+        if (!form || !section) {
+            return;
+        }
+
+        function getPriceInput() {
+            return form.querySelector('#product-price-input');
+        }
+
+        function enablePriceInput() {
+            const input = getPriceInput();
+            if (!input) {
+                return;
+            }
+
+            input.disabled = false;
+            input.placeholder = input.dataset.defaultPlaceholder || '';
+        }
+
+        function disablePriceInput() {
+            const input = getPriceInput();
+            if (!input) {
+                return;
+            }
+
+            input.value = '';
+            input.disabled = true;
+            input.placeholder = input.dataset.disabledPlaceholder || '';
+        }
+
+        function createVariantRow(title, price) {
+            const row = document.createElement('div');
+            row.className = 'variant-row';
+            row.innerHTML = `
+                <label>
+                    <span>${section.dataset.specLabel}</span>
+                    <input class="wa-input" name="variantTitles" placeholder="${section.dataset.specPlaceholder}" value="${escapeAttr(title || '')}"/>
+                </label>
+                <label>
+                    <span>${section.dataset.priceLabel}</span>
+                    <input class="wa-input" name="variantPrices" type="number" step="0.01" min="0" placeholder="${section.dataset.pricePlaceholder}" value="${escapeAttr(price || '')}"/>
+                </label>
+                <button type="button" class="variant-action-btn remove-variant-btn">${section.dataset.removeLabel}</button>
+            `;
+            return row;
+        }
+
+        function escapeAttr(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('"', '&quot;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;');
+        }
+
+        function showVariantsSection() {
+            const showBtn = form.querySelector('.show-variants-btn');
+            const rowsContainer = section.querySelector('#variant-rows');
+
+            section.hidden = false;
+            if (showBtn) {
+                showBtn.hidden = true;
+            }
+
+            if (rowsContainer && rowsContainer.children.length === 0) {
+                rowsContainer.appendChild(createVariantRow('', ''));
+            }
+
+            disablePriceInput();
+        }
+
+        function hideVariantsSection() {
+            const showBtn = form.querySelector('.show-variants-btn');
+            const rowsContainer = section.querySelector('#variant-rows');
+
+            if (rowsContainer) {
+                rowsContainer.innerHTML = '';
+            }
+
+            section.hidden = true;
+            if (showBtn) {
+                showBtn.hidden = false;
+            }
+
+            enablePriceInput();
+        }
+
+        function loadExistingVariants() {
+            let variants = [];
+            try {
+                variants = JSON.parse(form.dataset.variants || '[]');
+            } catch (error) {
+                variants = [];
+            }
+
+            if (!Array.isArray(variants) || variants.length === 0) {
+                enablePriceInput();
+                return;
+            }
+
+            const rowsContainer = section.querySelector('#variant-rows');
+            if (!rowsContainer) {
+                return;
+            }
+
+            variants.forEach((variant) => {
+                rowsContainer.appendChild(createVariantRow(variant.title, variant.price));
+            });
+
+            disablePriceInput();
+        }
+
+        form.addEventListener('click', function (event) {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            if (target.closest('.show-variants-btn')) {
+                event.preventDefault();
+                showVariantsSection();
+                return;
+            }
+
+            if (target.closest('.add-variant-btn')) {
+                event.preventDefault();
+                const rowsContainer = section.querySelector('#variant-rows');
+                if (rowsContainer) {
+                    rowsContainer.appendChild(createVariantRow('', ''));
+                }
+                return;
+            }
+
+            const removeBtn = target.closest('.remove-variant-btn');
+            if (!removeBtn) {
+                return;
+            }
+
+            event.preventDefault();
+            const rowsContainer = section.querySelector('#variant-rows');
+            const row = removeBtn.closest('.variant-row');
+            if (!rowsContainer || !row) {
+                return;
+            }
+
+            row.remove();
+            if (rowsContainer.querySelectorAll('.variant-row').length === 0) {
+                hideVariantsSection();
+            }
+        });
+
+        loadExistingVariants();
+    })();
+</script>
+</body>
+</html>
